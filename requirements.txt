@@ -1,0 +1,7 @@
+streamlit>=1.50
+sqlalchemy>=2.0
+pandas>=2.1
+openpyxl>=3.1
+plotly>=5.20
+psycopg[binary]>=3.1     # PostgreSQL driver (server)
+python-dotenv>=1.0
