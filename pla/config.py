@@ -21,11 +21,26 @@ class Settings:
     session_timeout_minutes: int
 
 
+def normalize_database_url(url: str) -> str:
+    """Accept connection strings exactly as hosting providers show them.
+
+    Neon / Supabase / Render / Heroku give `postgres://…` or `postgresql://…`;
+    SQLAlchemy needs the driver named, and this project ships psycopg 3.
+    """
+    url = url.strip()
+    for prefix in ("postgres://", "postgresql://"):
+        if url.startswith(prefix):
+            return "postgresql+psycopg://" + url[len(prefix):]
+    return url
+
+
 def get_settings() -> Settings:
     return Settings(
-        # SQLite for local use; set a PostgreSQL URL on the server, e.g.
-        # postgresql+psycopg://user:pass@host:5432/pla
-        database_url=os.getenv("DATABASE_URL", "sqlite:///data/pla.db"),
+        # SQLite for local use. On a server / Streamlit Cloud set a PostgreSQL URL,
+        # e.g. postgresql://user:pass@host/dbname?sslmode=require
+        # (On Streamlit Community Cloud, put DATABASE_URL in the app's Secrets:
+        # top-level secrets are exposed as environment variables.)
+        database_url=normalize_database_url(os.getenv("DATABASE_URL", "sqlite:///data/pla.db")),
         office_name=os.getenv("OFFICE_NAME", "PLA Account"),
         # Optional: creates this admin on first start if no users exist yet.
         admin_username=os.getenv("ADMIN_USERNAME") or None,

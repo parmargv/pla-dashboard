@@ -1,6 +1,19 @@
+# Local data & secrets — never commit
+data/
+*.db
+*.db-wal
+*.db-shm
+.env
+.streamlit/secrets.toml
+
+# Python
 __pycache__/
 *.pyc
-.env
-data/
+.venv/
+venv/
 .pytest_cache/
+
+# macOS / editors
+.DS_Store
+.vscode/
 .idea/

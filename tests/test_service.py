@@ -1,8 +1,11 @@
 from datetime import date, timedelta
 from decimal import Decimal
 
+import os
+
 import pytest
 
+from pla.config import normalize_database_url
 from pla.db import init_db, session_scope
 from pla.excel_export import build_pla_workbook
 from pla.models import Entry, EntryType
@@ -35,7 +38,12 @@ def save_cheque(s, *, entry_date, ref_no, amounts, cleared=True, cheque_amount=N
 
 @pytest.fixture()
 def db(tmp_path):
-    url = f"sqlite:///{tmp_path}/test.db"
+    # Set PG_TEST_URL=postgresql://user:pass@host/db to run against PostgreSQL (wipes that DB).
+    url = normalize_database_url(os.environ.get("PG_TEST_URL") or f"sqlite:///{tmp_path}/test.db")
+    if url.startswith("postgres"):
+        from pla.db import get_engine
+        from pla.models import Base
+        Base.metadata.drop_all(get_engine(url))
     init_db(url)
     with session_scope(url) as s:
         heads = {h.name: h.id for h in get_fund_heads(s)}
@@ -212,3 +220,12 @@ def test_migration_backfills_existing_database(tmp_path):
     with session_scope(url) as s:
         e = s.get(Entry, 1)
         assert e.cheque_amount == Decimal("250.00") and e.cleared_on == date(2026, 6, 1)
+
+
+def test_database_url_normalisation():
+    from pla.config import normalize_database_url as n
+    neon = "postgresql://u:p@ep-x.aws.neon.tech/neondb?sslmode=require"
+    assert n(neon) == "postgresql+psycopg://u:p@ep-x.aws.neon.tech/neondb?sslmode=require"
+    assert n("postgres://u:p@h/db") == "postgresql+psycopg://u:p@h/db"
+    assert n("postgresql+psycopg://u:p@h/db") == "postgresql+psycopg://u:p@h/db"
+    assert n("sqlite:///data/pla.db") == "sqlite:///data/pla.db"

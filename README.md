@@ -61,6 +61,25 @@ Tables and fund heads are created automatically on first start.
 For internet-facing use, put it behind a reverse proxy (nginx/Caddy) with HTTPS so
 passwords are never sent in plain text.
 
+## Deploy on Streamlit Community Cloud (free)
+Community Cloud has no persistent disk: when the app sleeps or restarts, local files
+(including a SQLite `data/pla.db`) are wiped. Use a free hosted PostgreSQL instead,
+e.g. [Neon](https://neon.com):
+1. Create a Neon project and copy its connection string
+   (`postgresql://user:pass@ep-….neon.tech/neondb?sslmode=require`).
+2. In Community Cloud: app ⋮ → **Settings → Secrets**, add
+   ```toml
+   DATABASE_URL = "postgresql://user:pass@ep-….neon.tech/neondb?sslmode=require"
+   ADMIN_USERNAME = "admin"
+   ADMIN_PASSWORD = "a-strong-password"
+   OFFICE_NAME = "PLA Account"
+   ```
+   Top-level secrets are exposed as environment variables, which the app reads.
+3. Save — the app restarts, creates its tables in Neon, and the admin can sign in.
+   Data now survives sleep, restarts and redeploys. Never commit `.streamlit/secrets.toml`.
+
+Run the tests against PostgreSQL with `PG_TEST_URL=postgresql://… pytest` (wipes that DB).
+
 ## Design
 ```
 app.py               entry point, navigation, DB bootstrap
